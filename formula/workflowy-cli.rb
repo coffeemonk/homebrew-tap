@@ -21,6 +21,6 @@ class WorkflowyCli < Formula
 
   test do
     output = shell_output("#{bin}/wf --version 2>&1", 0)
-    assert_match "workflowy-cli", output.downcase
+    assert_match version.to_s, output
   end
 end
