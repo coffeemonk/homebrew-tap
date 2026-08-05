@@ -1,0 +1,83 @@
+name: Update Formula
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight UTC
+  workflow_dispatch:     # Manual trigger via GitHub UI / CLI
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+
+      - name: Check for new release & update formula
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UPSTREAM_REPO="rodolfo-terriquez/workflowy-cli"
+          FORMULA_FILE="formula/workflowy-cli.rb"
+
+          # Get latest release tag from upstream
+          LATEST_TAG=$(curl -s "https://api.github.com/repos/${UPSTREAM_REPO}/releases/latest" | jq -r '.tag_name')
+          NEW_VERSION="${LATEST_TAG#v}"
+
+          # Extract current version in formula
+          CURRENT_VERSION=$(grep -E '^\s*version\s+"' "$FORMULA_FILE" | sed -E 's/.*"([^"]+)".*/\1/')
+
+          echo "Current Formula Version: ${CURRENT_VERSION}"
+          echo "Latest Upstream Version: ${NEW_VERSION}"
+
+          if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] && [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "null" ]; then
+            echo "New version found! Updating formula..."
+
+            # Calculate SHA256 checksums
+            ARM64_URL="https://github.com/${UPSTREAM_REPO}/releases/download/${LATEST_TAG}/workflowy-cli_${NEW_VERSION}_darwin_arm64.tar.gz"
+            INTEL_URL="https://github.com/${UPSTREAM_REPO}/releases/download/${LATEST_TAG}/workflowy-cli_${NEW_VERSION}_darwin_amd64.tar.gz"
+
+            ARM64_SHA256=$(curl -sL "$ARM64_URL" | sha256sum | awk '{print $1}')
+            INTEL_SHA256=$(curl -sL "$INTEL_URL" | sha256sum | awk '{print $1}')
+
+            # Generate updated formula file
+            cat <<EOF > "$FORMULA_FILE"
+class WorkflowyCli < Formula
+  desc "Command-line interface and MCP server for Workflowy"
+  homepage "https://github.com/rodolfo-terriquez/workflowy-cli"
+  version "${NEW_VERSION}"
+
+  on_macos do
+    on_arm do
+      url "${ARM64_URL}"
+      sha256 "${ARM64_SHA256}"
+    end
+    on_intel do
+      url "${INTEL_URL}"
+      sha256 "${INTEL_SHA256}"
+    end
+  end
+
+  def install
+    if File.exist?("workflowy-cli")
+      bin.install "workflowy-cli" => "wf"
+    elsif File.exist?("wf")
+      bin.install "wf"
+    end
+  end
+
+  test do
+    output = shell_output("#{bin}/wf --version 2>&1", 0)
+    assert_match "workflowy-cli", output.downcase
+  end
+end
+EOF
+
+            # Configure git and commit changes
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add "$FORMULA_FILE"
+            git commit -m "Bump workflowy-cli formula to ${NEW_VERSION}"
+            git push
+          else
+            echo "Formula is up to date."
+          fi
