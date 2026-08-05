@@ -40,35 +40,25 @@ jobs:
             ARM64_SHA256=$(curl -sL "$ARM64_URL" | sha256sum | awk '{print $1}')
             INTEL_SHA256=$(curl -sL "$INTEL_URL" | sha256sum | awk '{print $1}')
 
-            # Generate updated formula file
-            cat <<EOF > "$FORMULA_FILE"
-class WorkflowyCli < Formula
-  desc "Command-line interface and MCP server for Workflowy"
-  homepage "https://github.com/rodolfo-terriquez/workflowy-cli"
-  version "${NEW_VERSION}"
+            # Update version and sha256 checksums in-place
+            python3 -c '
+            import re, sys
+            path, version, arm_sha, intel_sha = sys.argv[1:5]
+            content = open(path).read()
 
-  on_macos do
-    on_arm do
-      url "${ARM64_URL}"
-      sha256 "${ARM64_SHA256}"
-    end
-    on_intel do
-      url "${INTEL_URL}"
-      sha256 "${INTEL_SHA256}"
-    end
-  end
+            content = re.sub(r"version \".*?\"", f"version \"{version}\"", content, count=1)
 
-  def install
-    binary_name = Hardware::CPU.arm? ? "wf-v#{version}-macos-arm64" : "wf-v#{version}-macos-x64"
-    bin.install binary_name => "wf"
-  end
+            shas = [arm_sha, intel_sha]
+            idx = 0
+            def repl(m):
+                global idx
+                val = f"sha256 \"{shas[idx]}\""
+                idx += 1
+                return val
 
-  test do
-    output = shell_output("#{bin}/wf --version 2>&1", 0)
-    assert_match version.to_s, output
-  end
-end
-EOF
+            content = re.sub(r"sha256 \".*?\"", repl, content, count=2)
+            open(path, "w").write(content)
+            ' "$FORMULA_FILE" "$NEW_VERSION" "$ARM64_SHA256" "$INTEL_SHA256"
 
             # Configure git and commit changes
             git config user.name "github-actions[bot]"
