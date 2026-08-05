@@ -5,21 +5,18 @@ class WorkflowyCli < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/rodolfo-terriquez/workflowy-cli/releases/download/v#{version}/workflowy-cli_#{version}_darwin_arm64.tar.gz"
-      sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
+      url "https://github.com/rodolfo-terriquez/workflowy-cli/releases/download/v#{version}/wf-v#{version}-macos-arm64"
+      sha256 "0712a851a6dde3f483ab9daad4764bb534150c5cabac2993ea56bcf5b1415b4f"
     end
     on_intel do
-      url "https://github.com/rodolfo-terriquez/workflowy-cli/releases/download/v#{version}/workflowy-cli_#{version}_darwin_amd64.tar.gz"
-      sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
+      url "https://github.com/rodolfo-terriquez/workflowy-cli/releases/download/v#{version}/wf-v#{version}-macos-x64"
+      sha256 "f588ff4666dd3e9535bcb9daad4764bb534150c5cabac2993ea56bcf5b1415b4f"
     end
   end
 
   def install
-    if File.exist?("workflowy-cli")
-      bin.install "workflowy-cli" => "wf"
-    elsif File.exist?("wf")
-      bin.install "wf"
-    end
+    binary_name = Hardware::CPU.arm? ? "wf-v#{version}-macos-arm64" : "wf-v#{version}-macos-x64"
+    bin.install binary_name => "wf"
   end
 
   test do

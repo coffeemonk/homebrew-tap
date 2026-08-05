@@ -32,10 +32,11 @@ jobs:
           if [ "$NEW_VERSION" != "$CURRENT_VERSION" ] && [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "null" ]; then
             echo "New version found! Updating formula..."
 
-            # Calculate SHA256 checksums
-            ARM64_URL="https://github.com/${UPSTREAM_REPO}/releases/download/${LATEST_TAG}/workflowy-cli_${NEW_VERSION}_darwin_arm64.tar.gz"
-            INTEL_URL="https://github.com/${UPSTREAM_REPO}/releases/download/${LATEST_TAG}/workflowy-cli_${NEW_VERSION}_darwin_amd64.tar.gz"
+            # Binary URLs
+            ARM64_URL="https://github.com/${UPSTREAM_REPO}/releases/download/${LATEST_TAG}/wf-v${NEW_VERSION}-macos-arm64"
+            INTEL_URL="https://github.com/${UPSTREAM_REPO}/releases/download/${LATEST_TAG}/wf-v${NEW_VERSION}-macos-x64"
 
+            # Calculate SHA256 checksums
             ARM64_SHA256=$(curl -sL "$ARM64_URL" | sha256sum | awk '{print $1}')
             INTEL_SHA256=$(curl -sL "$INTEL_URL" | sha256sum | awk '{print $1}')
 
@@ -58,11 +59,8 @@ class WorkflowyCli < Formula
   end
 
   def install
-    if File.exist?("workflowy-cli")
-      bin.install "workflowy-cli" => "wf"
-    elsif File.exist?("wf")
-      bin.install "wf"
-    end
+    binary_name = Hardware::CPU.arm? ? "wf-v#{version}-macos-arm64" : "wf-v#{version}-macos-x64"
+    bin.install binary_name => "wf"
   end
 
   test do
