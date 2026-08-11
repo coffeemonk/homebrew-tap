@@ -41,24 +41,24 @@ jobs:
             INTEL_SHA256=$(curl -sL "$INTEL_URL" | sha256sum | awk '{print $1}')
 
             # Update version and sha256 checksums in-place
-            python3 -c '
-            import re, sys
-            path, version, arm_sha, intel_sha = sys.argv[1:5]
-            content = open(path).read()
+            python3 - "$FORMULA_FILE" "$NEW_VERSION" "$ARM64_SHA256" "$INTEL_SHA256" << 'EOF'
+import re, sys
+path, version, arm_sha, intel_sha = sys.argv[1:5]
+content = open(path).read()
 
-            content = re.sub(r"version \".*?\"", f"version \"{version}\"", content, count=1)
+content = re.sub(r'version ".*?"', f'version "{version}"', content, count=1)
 
-            shas = [arm_sha, intel_sha]
-            idx = 0
-            def repl(m):
-                global idx
-                val = f"sha256 \"{shas[idx]}\""
-                idx += 1
-                return val
+shas = [arm_sha, intel_sha]
+idx = 0
+def repl(m):
+    global idx
+    val = f'sha256 "{shas[idx]}"'
+    idx += 1
+    return val
 
-            content = re.sub(r"sha256 \".*?\"", repl, content, count=2)
-            open(path, "w").write(content)
-            ' "$FORMULA_FILE" "$NEW_VERSION" "$ARM64_SHA256" "$INTEL_SHA256"
+content = re.sub(r'sha256 ".*?"', repl, content, count=2)
+open(path, "w").write(content)
+EOF
 
             # Configure git and commit changes
             git config user.name "github-actions[bot]"
