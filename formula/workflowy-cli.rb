@@ -1,16 +1,16 @@
 class WorkflowyCli < Formula
   desc "Command-line interface and MCP server for Workflowy"
   homepage "https://github.com/rodolfo-terriquez/workflowy-cli"
-  version "3.3.3"
+  version "3.3.5"
 
   on_macos do
     on_arm do
       url "https://github.com/rodolfo-terriquez/workflowy-cli/releases/download/v#{version}/wf-v#{version}-macos-arm64"
-      sha256 "16a853c03bed909701c32d9719a1e82b15b454aa954e953052e4344dd3ae98f1"
+      sha256 "230d88acbfd4c91bc885cbb2b5cc9cede4b12f08384a4ddcbf7a80815e4559cc"
     end
     on_intel do
       url "https://github.com/rodolfo-terriquez/workflowy-cli/releases/download/v#{version}/wf-v#{version}-macos-x64"
-      sha256 "1bd45f905d913d120c843f8e9e2cc84e66acf9895718bae07fa5700f67ea4a12"
+      sha256 "4932af3b4e395dd8778b2130b15dc052687142d7cf829722b53a5f917d58b7ee"
     end
   end
 
