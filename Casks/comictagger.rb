@@ -12,6 +12,7 @@ cask "comictagger" do
     strategy :github_latest
   end
 
+  conflicts_with cask: "comictagger@beta"
   depends_on :macos
 
   app "ComicTagger.app"

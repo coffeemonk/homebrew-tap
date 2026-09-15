@@ -33,7 +33,8 @@ These macOS applications were disabled in upstream `homebrew/cask` because upstr
 
 | Cask | Description | Upstream |
 | :--- | :--- | :--- |
-| **`comictagger`** | Metadata editor for digital comics | [comictagger/comictagger](https://github.com/comictagger/comictagger) |
+| **`comictagger`** | Metadata editor for digital comics (Stable 1.5.5, Intel / requires Rosetta) | [comictagger/comictagger](https://github.com/comictagger/comictagger) |
+| **`comictagger@beta`** | Metadata editor for digital comics (Beta 1.6.0, native Apple Silicon `arm64`) | [comictagger/comictagger](https://github.com/comictagger/comictagger) |
 | **`darktable`** | Photography workflow app and raw developer | [darktable-org/darktable](https://www.darktable.org/) |
 | **`kindle-comic-converter`** | Comic and manga converter for ebook readers | [ciromattia/kcc](https://github.com/ciromattia/kcc) |
 | **`makemkv`** | DVD and Blu-ray video converter / transcoder | [makemkv.com](https://www.makemkv.com/) |
@@ -42,6 +43,15 @@ These macOS applications were disabled in upstream `homebrew/cask` because upstr
 
 ```bash
 brew install --cask coffeemonk/tap/<cask-name>
+```
+
+For ComicTagger, you can choose between stable or beta:
+```bash
+# Stable (1.5.5 - Intel build, requires Rosetta)
+brew install --cask coffeemonk/tap/comictagger
+
+# Beta (1.6.0 - Native Apple Silicon ARM64 build)
+brew install --cask coffeemonk/tap/comictagger@beta
 ```
 
 #### macOS Gatekeeper / Quarantine Note

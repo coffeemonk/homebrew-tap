@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Dict, List, Optional, Tuple
 
@@ -58,18 +59,31 @@ class Target:
         source_type: str,  # 'github' | 'web'
         repo: Optional[str] = None,
         tag_prefix: str = "",
+        include_prereleases: bool = False,
+        asset_pattern: Optional[str] = None,
         web_url: Optional[str] = None,
         web_version_regex: Optional[str] = None,
         asset_url_template: str = "",
+        verify_hash_url_regex: Optional[str] = None,
+        verify_hash_pattern: Optional[str] = None,
     ):
         self.name = name
         self.file_path = file_path
         self.source_type = source_type
         self.repo = repo
         self.tag_prefix = tag_prefix
+        self.include_prereleases = include_prereleases
+        self.asset_pattern = asset_pattern
         self.web_url = web_url
         self.web_version_regex = web_version_regex
         self.asset_url_template = asset_url_template
+        self.verify_hash_url_regex = verify_hash_url_regex
+        self.verify_hash_pattern = verify_hash_pattern
+
+        self.latest_asset_name: Optional[str] = None
+        self.latest_asset_url: Optional[str] = None
+        self.expected_sha256: Optional[str] = None
+        self.hash_file_url: Optional[str] = None
 
     def get_current_version(self) -> str:
         with open(self.file_path, "r", encoding="utf-8") as f:
@@ -79,34 +93,103 @@ class Target:
             raise ValueError(f"Could not find version in {self.file_path}")
         return m.group(1)
 
+    def get_current_sha256(self) -> str:
+        with open(self.file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        m = re.search(r'sha256 "([^"]+)"', content)
+        if not m:
+            raise ValueError(f"Could not find sha256 in {self.file_path}")
+        return m.group(1)
+
     def get_latest_upstream(self, token: Optional[str]) -> Tuple[str, str]:
         """Returns (latest_version, tag_name)."""
         if self.source_type == "github":
-            url = f"https://api.github.com/repos/{self.repo}/releases/latest"
-            data = json.loads(fetch_text(url, token))
-            tag_name = data["tag_name"]
-            version = tag_name
-            if self.tag_prefix and version.startswith(self.tag_prefix):
-                version = version[len(self.tag_prefix) :]
-            elif version.startswith("v") and not self.tag_prefix:
-                version = version[1:]
-            return version, tag_name
+            if self.include_prereleases:
+                url = f"https://api.github.com/repos/{self.repo}/releases"
+                releases = json.loads(fetch_text(url, token))
+                selected_release = None
+                for rel in releases:
+                    if rel.get("prerelease", False):
+                        selected_release = rel
+                        break
+                if not selected_release and releases:
+                    selected_release = releases[0]
+                if not selected_release:
+                    raise ValueError(f"No releases found for {self.repo}")
+
+                tag_name = selected_release["tag_name"]
+                version = tag_name
+                if self.tag_prefix and version.startswith(self.tag_prefix):
+                    version = version[len(self.tag_prefix) :]
+                elif version.startswith("v") and not self.tag_prefix:
+                    version = version[1:]
+
+                if self.asset_pattern:
+                    matched_asset = None
+                    for asset in selected_release.get("assets", []):
+                        if re.search(self.asset_pattern, asset["name"]):
+                            matched_asset = asset
+                            break
+                    if not matched_asset:
+                        raise ValueError(
+                            f"No asset matching {self.asset_pattern} in release {tag_name}"
+                        )
+                    self.latest_asset_name = matched_asset["name"]
+                    self.latest_asset_url = matched_asset["browser_download_url"]
+
+                return version, tag_name
+            else:
+                url = f"https://api.github.com/repos/{self.repo}/releases/latest"
+                data = json.loads(fetch_text(url, token))
+                tag_name = data["tag_name"]
+                version = tag_name
+                if self.tag_prefix and version.startswith(self.tag_prefix):
+                    version = version[len(self.tag_prefix) :]
+                elif version.startswith("v") and not self.tag_prefix:
+                    version = version[1:]
+                return version, tag_name
+
         elif self.source_type == "web":
             html = fetch_text(self.web_url, token)
             m = re.search(self.web_version_regex, html)
             if not m:
                 raise ValueError(f"Could not extract version from {self.web_url}")
             version = m.group(1)
+
+            if self.verify_hash_url_regex and self.verify_hash_pattern:
+                m_hash_url = re.search(self.verify_hash_url_regex, html)
+                if m_hash_url:
+                    self.hash_file_url = urllib.parse.urljoin(self.web_url, m_hash_url.group(1))
+                    hash_content = fetch_text(self.hash_file_url, token)
+                    m_hash = re.search(self.verify_hash_pattern, hash_content)
+                    if m_hash:
+                        self.expected_sha256 = m_hash.group(1)
+                    else:
+                        raise ValueError(
+                            f"Could not extract hash using {self.verify_hash_pattern} from {self.hash_file_url}"
+                        )
+                else:
+                    raise ValueError(
+                        f"Could not find hash file URL using {self.verify_hash_url_regex} on {self.web_url}"
+                    )
+
             return version, version
         else:
             raise ValueError(f"Unknown source type: {self.source_type}")
 
-    def update_file(self, new_version: str, new_sha256: str) -> None:
+    def update_file(
+        self, new_version: str, new_sha256: str, new_asset_name: Optional[str] = None
+    ) -> None:
         with open(self.file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
         content = re.sub(r'version "[^"]+"', f'version "{new_version}"', content, count=1)
         content = re.sub(r'sha256 "[^"]+"', f'sha256 "{new_sha256}"', content, count=1)
+
+        if new_asset_name and self.repo:
+            url_pattern = rf'url "https://github\.com/{re.escape(self.repo)}/releases/download/#\{{version\}}/[^"]+"'
+            new_url_line = f'url "https://github.com/{self.repo}/releases/download/#{{version}}/{new_asset_name}"'
+            content = re.sub(url_pattern, new_url_line, content, count=1)
 
         with open(self.file_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -128,6 +211,15 @@ TARGETS: Dict[str, Target] = {
         repo="comictagger/comictagger",
         tag_prefix="",
         asset_url_template="https://github.com/{repo}/releases/download/{tag}/ComicTagger-{version}-osx-10.15.7-x86_64.app.zip",
+    ),
+    "comictagger@beta": Target(
+        name="comictagger@beta",
+        file_path="Casks/comictagger@beta.rb",
+        source_type="github",
+        repo="comictagger/comictagger",
+        tag_prefix="",
+        include_prereleases=True,
+        asset_pattern=r"ComicTagger-.*-arm64\.dmg",
     ),
     "darktable": Target(
         name="darktable",
@@ -152,6 +244,8 @@ TARGETS: Dict[str, Target] = {
         web_url="https://www.makemkv.com/download/",
         web_version_regex=r'href=[\'"].*?/makemkv[._-]v?(\d+(?:\.\d+)+)[._-]osx\.dmg[\'"]',
         asset_url_template="https://www.makemkv.com/download/makemkv_v{version}_osx.dmg",
+        verify_hash_url_regex=r'href=[\'"]([^\'"]*makemkv-sha-[^\'"]+\.txt)[\'"]',
+        verify_hash_pattern=r"([a-fA-F0-9]{64})\s+.*?osx\.dmg",
     ),
 }
 
@@ -169,20 +263,43 @@ def check_and_update(target: Target, token: Optional[str]) -> Optional[Tuple[str
     print(f"    Upstream version:    {latest_ver} (tag: {tag_name})")
 
     if current_ver == latest_ver:
+        if target.expected_sha256:
+            current_sha = target.get_current_sha256()
+            if current_sha.lower() == target.expected_sha256.lower():
+                print(
+                    f"    ✓ Hash verified against upstream {target.hash_file_url}: {target.expected_sha256}"
+                )
+            else:
+                print(
+                    f"    ⚠️ Warning: Cask SHA256 ({current_sha}) does not match upstream hash ({target.expected_sha256})"
+                )
         print(f"    ✓ {target.name} is already up to date. No downloads required.")
         return None
 
     print(f"    ⚡ New version detected for {target.name}: {current_ver} -> {latest_ver}")
 
-    url = target.asset_url_template.format(
-        repo=target.repo,
-        tag=tag_name,
-        version=latest_ver,
-    )
-    new_sha256 = calculate_remote_sha256(url, token)
-    print(f"    SHA256: {new_sha256}")
+    if target.latest_asset_url:
+        url = target.latest_asset_url
+    else:
+        url = target.asset_url_template.format(
+            repo=target.repo,
+            tag=tag_name,
+            version=latest_ver,
+        )
 
-    target.update_file(latest_ver, new_sha256)
+    new_sha256 = calculate_remote_sha256(url, token)
+    print(f"    Calculated SHA256: {new_sha256}")
+
+    if target.expected_sha256:
+        if new_sha256.lower() != target.expected_sha256.lower():
+            raise ValueError(
+                f"Hash verification failed for {target.name} {latest_ver}!\n"
+                f"  Published hash ({target.hash_file_url}): {target.expected_sha256}\n"
+                f"  Calculated hash:                        {new_sha256}"
+            )
+        print(f"    ✓ Verified computed SHA256 matches upstream hash file ({target.hash_file_url})")
+
+    target.update_file(latest_ver, new_sha256, target.latest_asset_name)
     print(f"    ✓ Updated {target.file_path} to {latest_ver}")
     return (target.name, current_ver, latest_ver)
 
