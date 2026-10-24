@@ -229,14 +229,6 @@ TARGETS: Dict[str, Target] = {
         tag_prefix="release-",
         asset_url_template="https://github.com/{repo}/releases/download/{tag}/darktable-{version}-arm64.dmg",
     ),
-    "kindle-comic-converter": Target(
-        name="kindle-comic-converter",
-        file_path="Casks/kindle-comic-converter.rb",
-        source_type="github",
-        repo="ciromattia/kcc",
-        tag_prefix="v",
-        asset_url_template="https://github.com/{repo}/releases/download/{tag}/kcc_macos_arm_{version}.dmg",
-    ),
     "makemkv": Target(
         name="makemkv",
         file_path="Casks/makemkv.rb",
