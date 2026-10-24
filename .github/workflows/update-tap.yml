@@ -16,7 +16,6 @@ on:
           - comictagger
           - comictagger@beta
           - darktable
-          - kindle-comic-converter
           - makemkv
           - webviewscreensaver
 

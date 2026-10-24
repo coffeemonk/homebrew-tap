@@ -36,7 +36,6 @@ These macOS applications were disabled in upstream `homebrew/cask` because upstr
 | **`comictagger`** | Metadata editor for digital comics (Stable 1.5.5, Intel / requires Rosetta) | [comictagger/comictagger](https://github.com/comictagger/comictagger) |
 | **`comictagger@beta`** | Metadata editor for digital comics (Beta 1.6.0, native Apple Silicon `arm64`) | [comictagger/comictagger](https://github.com/comictagger/comictagger) |
 | **`darktable`** | Photography workflow app and raw developer | [darktable-org/darktable](https://www.darktable.org/) |
-| **`kindle-comic-converter`** | Comic and manga converter for ebook readers | [ciromattia/kcc](https://github.com/ciromattia/kcc) |
 | **`makemkv`** | DVD and Blu-ray video converter / transcoder | [makemkv.com](https://www.makemkv.com/) |
 | **`webviewscreensaver`** | Screen saver that displays web pages | [liquidx/webviewscreensaver](https://github.com/liquidx/webviewscreensaver) |
 
