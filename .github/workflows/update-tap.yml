@@ -18,6 +18,7 @@ on:
           - darktable
           - kindle-comic-converter
           - makemkv
+          - webviewscreensaver
 
 jobs:
   update-tap:
