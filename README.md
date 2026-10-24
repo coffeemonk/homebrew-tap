@@ -38,6 +38,7 @@ These macOS applications were disabled in upstream `homebrew/cask` because upstr
 | **`darktable`** | Photography workflow app and raw developer | [darktable-org/darktable](https://www.darktable.org/) |
 | **`kindle-comic-converter`** | Comic and manga converter for ebook readers | [ciromattia/kcc](https://github.com/ciromattia/kcc) |
 | **`makemkv`** | DVD and Blu-ray video converter / transcoder | [makemkv.com](https://www.makemkv.com/) |
+| **`webviewscreensaver`** | Screen saver that displays web pages | [liquidx/webviewscreensaver](https://github.com/liquidx/webviewscreensaver) |
 
 ### Installation
 

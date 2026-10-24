@@ -247,6 +247,14 @@ TARGETS: Dict[str, Target] = {
         verify_hash_url_regex=r'href=[\'"]([^\'"]*makemkv-sha-[^\'"]+\.txt)[\'"]',
         verify_hash_pattern=r"([a-fA-F0-9]{64})\s+.*?osx\.dmg",
     ),
+    "webviewscreensaver": Target(
+        name="webviewscreensaver",
+        file_path="Casks/webviewscreensaver.rb",
+        source_type="github",
+        repo="liquidx/webviewscreensaver",
+        tag_prefix="v",
+        asset_url_template="https://github.com/{repo}/releases/download/{tag}/WebViewScreenSaver-{version}.zip",
+    ),
 }
 
 
